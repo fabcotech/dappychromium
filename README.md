@@ -1,6 +1,12 @@
+## Get depot_tools
+
+```console
+$ git submodule update --init
+```
+
 ## Fetch
 
-> Fetch Chromium's code.
+> Fetch Chromium's code and its dependencies
 
 ```console
 $ ./scripts/gclient.sh sync
