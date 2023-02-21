@@ -12,6 +12,14 @@ $ git submodule update --init
 $ ./scripts/gclient.sh sync
 ```
 
+#### Apply patches
+
+> Any changes made to Chromium will be reverted, make sure to save any changes you made.
+
+```console
+$ ./scripts/patches.sh apply
+```
+
 ## Configure
 
 ```console

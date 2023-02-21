@@ -1,0 +1,312 @@
+From 5f24fc39efcfdc23a51fbe01f358a117ce9b3474 Mon Sep 17 00:00:00 2001
+From: Paul Musso <paul@musso.io>
+Date: Tue, 21 Feb 2023 14:14:01 +0100
+Subject: [PATCH] add: hello_world component
+
+---
+ chrome/browser/ui/BUILD.gn                    |  1 +
+ chrome/browser/ui/DEPS                        |  1 +
+ .../webui/chrome_web_ui_controller_factory.cc |  5 +++
+ components/components_strings.grd             |  1 +
+ components/hello_world/BUILD.gn               | 15 +++++++
+ components/hello_world/constants.cc           |  8 ++++
+ components/hello_world/constants.h            | 16 +++++++
+ components/hello_world/hello_world.css        |  3 ++
+ components/hello_world/hello_world.html       | 13 ++++++
+ components/hello_world/hello_world.js         |  5 +++
+ components/hello_world/hello_world_ui.cc      | 43 +++++++++++++++++++
+ components/hello_world/hello_world_ui.h       | 22 ++++++++++
+ components/hello_world_strings.grdp           |  9 ++++
+ .../resources/dev_ui_components_resources.grd |  1 +
+ .../resources/hello_world_resources.grdp      |  6 +++
+ 15 files changed, 149 insertions(+)
+ create mode 100644 components/hello_world/BUILD.gn
+ create mode 100644 components/hello_world/constants.cc
+ create mode 100644 components/hello_world/constants.h
+ create mode 100644 components/hello_world/hello_world.css
+ create mode 100644 components/hello_world/hello_world.html
+ create mode 100644 components/hello_world/hello_world.js
+ create mode 100644 components/hello_world/hello_world_ui.cc
+ create mode 100644 components/hello_world/hello_world_ui.h
+ create mode 100644 components/hello_world_strings.grdp
+ create mode 100644 components/resources/hello_world_resources.grdp
+
+diff --git a/chrome/browser/ui/BUILD.gn b/chrome/browser/ui/BUILD.gn
+index a49103add8e26..cf8f5bdd7af9d 100644
+--- a/chrome/browser/ui/BUILD.gn
++++ b/chrome/browser/ui/BUILD.gn
+@@ -491,6 +491,7 @@ static_library("ui") {
+     "//components/gcm_driver",
+     "//components/google/core/common",
+     "//components/heap_profiling/multi_process",
++    "//components/hello_world:common",
+     "//components/history/content/browser",
+     "//components/history/core/browser",
+     "//components/history/core/common",
+diff --git a/chrome/browser/ui/DEPS b/chrome/browser/ui/DEPS
+index 4dccb967b057a..eddb799242119 100644
+--- a/chrome/browser/ui/DEPS
++++ b/chrome/browser/ui/DEPS
+@@ -8,6 +8,7 @@ include_rules = [
+   "+components/country_codes",
+   "+components/endpoint_fetcher",
+   "+components/enterprise",
++  "+components/hello_world",
+   "+components/infobars/android",
+   "+components/image_service",
+   "+components/live_caption",
+diff --git a/chrome/browser/ui/webui/chrome_web_ui_controller_factory.cc b/chrome/browser/ui/webui/chrome_web_ui_controller_factory.cc
+index 88b88d95c04a2..c31f43e5b9e3b 100644
+--- a/chrome/browser/ui/webui/chrome_web_ui_controller_factory.cc
++++ b/chrome/browser/ui/webui/chrome_web_ui_controller_factory.cc
+@@ -97,6 +97,8 @@
+ #include "components/signin/public/base/signin_buildflags.h"
+ #include "components/site_engagement/content/site_engagement_service.h"
+ #include "components/supervised_user/core/common/buildflags.h"
++#include "components/hello_world/hello_world_ui.h"
++#include "components/hello_world/constants.h"
+ #include "content/public/browser/web_contents.h"
+ #include "content/public/browser/web_ui.h"
+ #include "content/public/common/content_client.h"
+@@ -860,6 +862,9 @@ WebUIFactoryFunction GetWebUIFactoryFunction(WebUI* web_ui,
+   if (url.host_piece() == chrome::kChromeUIVersionHost)
+     return &NewWebUI<VersionUI>;
+ 
++  if (url.host_piece() == hello_world::kChromeUIHelloWorldHost)
++   return &NewWebUI<hello_world::HelloWorldUI>;
++
+ #if !BUILDFLAG(IS_ANDROID)
+ #if !BUILDFLAG(IS_CHROMEOS)
+   // AppLauncherPage is not needed on Android or ChromeOS.
+diff --git a/components/components_strings.grd b/components/components_strings.grd
+index 2751b112ece3d..ce45273286827 100644
+--- a/components/components_strings.grd
++++ b/components/components_strings.grd
+@@ -337,6 +337,7 @@
+       <part file="user_education_strings.grdp" />
+       <part file="version_ui_strings.grdp" />
+       <part file="webapps_strings.grdp" />
++      <part file="hello_world_strings.grdp" />
+ 
+       <if expr="not is_ios">
+         <part file="history_clusters_strings.grdp" />
+diff --git a/components/hello_world/BUILD.gn b/components/hello_world/BUILD.gn
+new file mode 100644
+index 0000000000000..250332a66e8f1
+--- /dev/null
++++ b/components/hello_world/BUILD.gn
+@@ -0,0 +1,15 @@
++component("common") {
++  sources = [
++    "hello_world_ui.cc",
++    "hello_world_ui.h",
++    "constants.cc",
++    "constants.h",
++  ]
++  deps = [
++    "//base",
++    "//content/public/browser",
++    "//components/resources",
++  ]
++
++  defines = [ "IS_HELLO_WORLD_IMPL" ]
++}
+diff --git a/components/hello_world/constants.cc b/components/hello_world/constants.cc
+new file mode 100644
+index 0000000000000..074179f42b71f
+--- /dev/null
++++ b/components/hello_world/constants.cc
+@@ -0,0 +1,8 @@
++#include "components/hello_world/constants.h"
++
++namespace hello_world {
++
++const char kChromeUIHelloWorldURL[] = "chrome://hello-world/";
++const char kChromeUIHelloWorldHost[] = "hello-world";
++
++}
+diff --git a/components/hello_world/constants.h b/components/hello_world/constants.h
+new file mode 100644
+index 0000000000000..389d830e08a97
+--- /dev/null
++++ b/components/hello_world/constants.h
+@@ -0,0 +1,16 @@
++#ifndef COMPONENTS_HELLO_WORLD_CONSTANTS_H_
++#define COMPONENTS_HELLO_WORLD_CONSTANTS_H_
++
++#include "base/component_export.h"
++
++namespace hello_world {
++
++COMPONENT_EXPORT(HELLO_WORLD)
++extern const char kChromeUIHelloWorldURL[];
++
++COMPONENT_EXPORT(HELLO_WORLD)
++extern const char kChromeUIHelloWorldHost[];
++
++}
++
++#endif  // COMPONENTS_HELLO_WORLD_CONSTANTS_H_
+\ No newline at end of file
+diff --git a/components/hello_world/hello_world.css b/components/hello_world/hello_world.css
+new file mode 100644
+index 0000000000000..883aa187cf9a4
+--- /dev/null
++++ b/components/hello_world/hello_world.css
+@@ -0,0 +1,3 @@
++p {
++  white-space: pre-wrap;
++}
+\ No newline at end of file
+diff --git a/components/hello_world/hello_world.html b/components/hello_world/hello_world.html
+new file mode 100644
+index 0000000000000..c3dcec8e816f8
+--- /dev/null
++++ b/components/hello_world/hello_world.html
+@@ -0,0 +1,13 @@
++<!DOCTYPE HTML>
++<html>
++<head>
++ <meta charset="utf-8">
++ <title>Hello World</title>
++ <link rel="stylesheet" href="hello_world.css">
++ <link rel="stylesheet" href="chrome://resources/css/text_defaults.css">
++</head>
++<body>
++  <p>hello world</p>
++  <script type="module" src="hello_world.js"></script>
++</body> 
++</html>
+\ No newline at end of file
+diff --git a/components/hello_world/hello_world.js b/components/hello_world/hello_world.js
+new file mode 100644
+index 0000000000000..4348670dac8b7
+--- /dev/null
++++ b/components/hello_world/hello_world.js
+@@ -0,0 +1,5 @@
++function initialize() {
++  console.log('Hello World initialized');
++}
++
++document.addEventListener('DOMContentLoaded', initialize);
+\ No newline at end of file
+diff --git a/components/hello_world/hello_world_ui.cc b/components/hello_world/hello_world_ui.cc
+new file mode 100644
+index 0000000000000..abd86c2b6fbb9
+--- /dev/null
++++ b/components/hello_world/hello_world_ui.cc
+@@ -0,0 +1,43 @@
++#include "components/hello_world/hello_world_ui.h"
++
++#include "components/grit/components_scaled_resources.h"
++#include "components/grit/dev_ui_components_resources.h"
++#include "components/hello_world/constants.h"
++#include "components/strings/grit/components_strings.h"
++#include "content/public/browser/browser_context.h"
++#include "content/public/browser/web_contents.h"
++#include "content/public/browser/web_ui.h"
++#include "content/public/browser/web_ui_data_source.h"
++
++namespace hello_world {
++
++HelloWorldUI::HelloWorldUI(content::WebUI* web_ui)
++    : content::WebUIController(web_ui) {
++  // Set up the chrome://hello-world source.
++  content::WebUIDataSource* html_source =
++      content::WebUIDataSource::CreateAndAdd(
++          web_ui->GetWebContents()->GetBrowserContext(),
++          hello_world::kChromeUIHelloWorldHost);
++
++  // Localized strings.
++  static constexpr webui::LocalizedString kStrings[] = {
++      {"helloWorldTitle", IDS_HELLO_WORLD_TITLE},
++      {"welcomeMessage", IDS_HELLO_WORLD_WELCOME_TEXT},
++  };
++  html_source->AddLocalizedStrings(kStrings);
++
++  // As a demonstration of passing a variable for JS to use we pass in the name "Bob".
++  html_source->AddString("userName", "Bob");
++  html_source->UseStringsJs();
++
++  // Add required resources.
++  html_source->AddResourcePath("hello_world.css", IDR_HELLO_WORLD_CSS);
++  html_source->AddResourcePath("hello_world.js", IDR_HELLO_WORLD_JS);
++  
++  html_source->SetDefaultResource(IDR_HELLO_WORLD_HTML);
++}
++
++HelloWorldUI::~HelloWorldUI() {
++}
++
++}  // namespace hello_world
+\ No newline at end of file
+diff --git a/components/hello_world/hello_world_ui.h b/components/hello_world/hello_world_ui.h
+new file mode 100644
+index 0000000000000..c436090426a05
+--- /dev/null
++++ b/components/hello_world/hello_world_ui.h
+@@ -0,0 +1,22 @@
++#ifndef COMPONENTS_HELLO_WORLD_HELLO_WORLD_UI_H_
++#define COMPONENTS_HELLO_WORLD_HELLO_WORLD_UI_H_
++#pragma once
++
++#include "base/component_export.h"
++#include "content/public/browser/web_ui_controller.h"
++
++namespace hello_world {
++
++// The WebUI for chrome://hello-world
++class COMPONENT_EXPORT(HELLO_WORLD) HelloWorldUI : public content::WebUIController {
++ public:
++  explicit HelloWorldUI(content::WebUI* web_ui);
++  HelloWorldUI(const HelloWorldUI&) = delete;
++  HelloWorldUI& operator=(const HelloWorldUI&) = delete;
++  ~HelloWorldUI() override;
++ private:
++};
++
++}  // namespace hello_world
++
++#endif  // COMPONENTS_HELLO_WORLD_HELLO_WORLD_UI_H_
+\ No newline at end of file
+diff --git a/components/hello_world_strings.grdp b/components/hello_world_strings.grdp
+new file mode 100644
+index 0000000000000..82bacc0104bb4
+--- /dev/null
++++ b/components/hello_world_strings.grdp
+@@ -0,0 +1,9 @@
++<?xml version="1.0" encoding="utf-8"?>
++<grit-part>
++  <message name="IDS_HELLO_WORLD_TITLE" desc="A happy message saying hello to the world">
++    Hello World!
++  </message>
++  <message name="IDS_HELLO_WORLD_WELCOME_TEXT" desc="Message welcoming the user to the hello world page">
++    Welcome to this fancy Hello World page <ph name="WELCOME_NAME">$1<ex>Chromium User</ex></ph>!
++  </message>
++</grit-part>
+\ No newline at end of file
+diff --git a/components/resources/dev_ui_components_resources.grd b/components/resources/dev_ui_components_resources.grd
+index 671161843bae6..46bae450d61c8 100644
+--- a/components/resources/dev_ui_components_resources.grd
++++ b/components/resources/dev_ui_components_resources.grd
+@@ -25,6 +25,7 @@ Feature Module (DevUI DFM) for Android Chrome. More info:
+       <part file="security_interstitials_dev_ui_resources.grdp" />
+       <part file="signin_resources.grdp" />
+       <part file="user_actions_ui_resources.grdp" />
++      <part file="hello_world_resources.grdp" />      
+     </includes>
+   </release>
+ </grit>
+diff --git a/components/resources/hello_world_resources.grdp b/components/resources/hello_world_resources.grdp
+new file mode 100644
+index 0000000000000..4c5f24996ea09
+--- /dev/null
++++ b/components/resources/hello_world_resources.grdp
+@@ -0,0 +1,6 @@
++<?xml version="1.0" encoding="utf-8"?>
++<grit-part>
++  <include name="IDR_HELLO_WORLD_HTML" file="../../components/hello_world/hello_world.html" type="BINDATA" />
++  <include name="IDR_HELLO_WORLD_CSS" file="../../components/hello_world/hello_world.css" type="BINDATA" />
++  <include name="IDR_HELLO_WORLD_JS" file="../../components/hello_world/hello_world.js" type="BINDATA" />
++</grit-part>
+\ No newline at end of file
